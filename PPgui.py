@@ -180,6 +180,7 @@ class mapCreator:
 
         #GridMap Object
         self.my2Dmap = MAP.GridMapD()
+        self.my2Dmap.add_obs([0, 0])
 
         #matplotlib objects
         self.f = Figure(figsize=(5,5), dpi=100)
@@ -253,6 +254,7 @@ class mapCreator:
             return
 
         self.my2Dmap = MAP.GridMapD([self.xyres, self.xyres])
+        self.my2Dmap.add_obs([0, 0])
         self.update_map()
         return
 
@@ -260,12 +262,12 @@ class mapCreator:
         self.update_map()
         #switch into path mode
         self.forcewait.set(True)
-        self.expL.config(text="Please click on the map\n to select starting point", font=20)
+        self.expL.config(text="Please click on the one of the red cells to select starting point", font=20)
         self.canvas.get_tk_widget().bind("<Button 1>", self.get_start)
         self.master.wait_variable(self.forcewait)
         
         self.forcewait.set(True)
-        self.expL.config(text="Please click on the map\n to select goal", font=20)
+        self.expL.config(text="Please click on the one of the red cells to select goal", font=20)
         self.canvas.get_tk_widget().bind("<Button 1>", self.get_goal)
         self.master.wait_variable(self.forcewait)
         
