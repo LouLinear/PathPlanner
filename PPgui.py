@@ -45,8 +45,7 @@ class startPrompt:
 
         #Dropdown list
         self.options = [
-            "Create custom 2D map",
-            "Use example 2D map",
+            "2D planning (GUI)",
             "3D planning (No GUI)"
         ]
         self.actionVar = StringVar()
@@ -56,7 +55,7 @@ class startPrompt:
 
         #Buttons
         self.proceedB = Button(self.rbF, text='Proceed')
-        self.exitB = Button(self.rbF, text='Exit', command=self.master.destroy)
+        self.exitB = Button(self.rbF, text='Exit', command=self.safe_exit)
 
         self.proceedB.grid(row=0, sticky=W)
         self.exitB.grid(row=1, sticky=W)
@@ -69,15 +68,54 @@ class startPrompt:
         if self.actionCB.get() == self.options[0]:
             print "Launching map creator..."
             newLv = Toplevel(self.master)
+            newLv.wm_title("Map Creator")
             newLv.resizable(width=FALSE, height=FALSE)
             mC = mapCreator(newLv)
         elif self.actionCB.get() == self.options[1]:
-            print "Launching map creator..."
-            newLv = Toplevel(self.master)
-            newLv.resizable(width=FALSE, height=FALSE)
-            mS = mapCreator(newLv)
-        elif self.actionCB.get() == self.options[2]:
             print "Exiting Gui, entering terminal UX"
+            self.threeDplan()
+        return
+
+    def safe_exit(self):
+        self.master.eval('::ttk::CancelRepeat')
+        self.master.destroy()
+        
+    def threeDplan(self):
+        
+        xdim = input("Enter your desired x dimension of the map: ")
+        ydim = input("Enter your desired y dimension of the map: ")
+        zdim = input("Enter your desired z dimension of the map: ")
+
+        start = np.array([0, 0, 0])
+        dim = np.array([int(xdim), int(ydim), int(zdim)])
+        goal = dim - 1
+
+        my3Dmap = MAP.GridMapD(dim)
+        my3Dmap.rand_obs_gen(0.1)
+        Planner3D = PP.PlannerHolo(my3Dmap)
+
+
+        print \
+"""
+The system randomly generated obstacles with probability
+of any given cell of being an obstacle = 0.1
+"""
+
+        print \
+"""
+The system picked [0, 0, 0] to be your start point and [%d, %d, %d]  for
+your end point since 3D planning is unintuitive and has a lot of cells.
+Let's see if we can find a path"
+"""%tuple(goal)
+
+        path = Planner3D.plan(start, goal)
+        
+        if path is not None:
+            print "We found a path! your waypoints are:\n"
+            Planner3D.printpath(path)
+        else:
+            print \
+"I am sorry that you can't find a path, let's try again by pressing proceed on the prompt window"
 
         return
 
@@ -118,7 +156,7 @@ class mapCreator:
         self.canvas._tkcanvas.pack(fill=BOTH, expand=True)
 
         #Labels
-        self.expL = Label(self.rtF, text="left click on the map to add obstacles\n right click to remove\nred is free space")
+        self.expL = Label(self.rtF, text="left click on the map to add obstacles\n right click to remove\nred is free space", font=20)
         self.expL.pack()
 
         #Entry
@@ -165,27 +203,31 @@ class mapCreator:
         return
 
     def planBclick(self):
+        self.update_map()
         #switch into path mode
         self.forcewait.set(True)
-        self.expL.config(text="Please click on the map to select starting point")
+        self.expL.config(text="Please click on the map\n to select starting point", font=20)
         self.canvas.get_tk_widget().bind("<Button 1>", self.get_start)
         self.master.wait_variable(self.forcewait)
         
         self.forcewait.set(True)
-        self.expL.config(text="Please click on the map to select goal")
+        self.expL.config(text="Please click on the map\n to select goal", font=20)
         self.canvas.get_tk_widget().bind("<Button 1>", self.get_goal)
         self.master.wait_variable(self.forcewait)
         
         Planner = PP.PlannerHolo(self.my2Dmap)
         path = Planner.plan(self.start, self.goal)
-        Planner.printpath(path)
-
+        
         if path is not None:
             #plot path
+            print "Way points passed:\n"
+            Planner.printpath(path)
             xdata = path[:, 0]
             ydata = path[:, 1]
             self.a.plot(ydata, xdata, 'y')
             self.canvas.show()
+        else:
+            print "I am sorry, no path can be found"
 
         #back to map mode
         self.canvas.get_tk_widget().bind("<Button-1>", self.place_obs)
@@ -210,20 +252,25 @@ class mapCreator:
         
     def get_start(self, event):
         self.start = np.array(self.canvas2plot(event.x, event.y), dtype=np.intp)
-        self.a.autoscale(False)
-        self.a.plot(self.start[1], self.start[0], 'yx')
-        self.canvas.show()
-        self.forcewait.set(False)
+        if self.my2Dmap.access(self.start):
+            self.a.autoscale(False)
+            self.a.plot(self.start[1], self.start[0], 'yx')
+            self.canvas.show()
+            self.forcewait.set(False)
+        return
 
     def get_goal(self, event):
         self.goal = np.array(self.canvas2plot(event.x, event.y), dtype=np.intp)
-        self.a.autoscale(False)
-        self.a.plot(self.goal[1], self.goal[0], 'yx')
-        self.canvas.show()
-        self.forcewait.set(False)
+        if self.my2Dmap.access(self.goal):
+            self.a.autoscale(False)
+            self.a.plot(self.goal[1], self.goal[0], 'yx')
+            self.canvas.show()
+            self.forcewait.set(False)
+        return
     
 
 root = Tk()
+root.wm_title("Prompt")
 SP = startPrompt(root)
 
 root.mainloop()
