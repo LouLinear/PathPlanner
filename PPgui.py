@@ -74,6 +74,7 @@ class startPrompt:
         elif self.actionCB.get() == self.options[1]:
             print "Exiting Gui, entering terminal UX"
             self.threeDplan()
+       
         return
 
     def safe_exit(self):
@@ -269,8 +270,8 @@ class mapCreator:
         return
     
 
-root = Tk()
-root.wm_title("Prompt")
-SP = startPrompt(root)
-
-root.mainloop()
+def run_program():
+    root = Tk()
+    root.wm_title("Prompt")
+    SP = startPrompt(root)
+    root.mainloop()
