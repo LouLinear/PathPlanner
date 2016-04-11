@@ -65,6 +65,10 @@ class GridMapD:
                 self._denseMap[pos[0], pos[1], pos[2]] = True
             return
 
+    def obs_sparse(self):
+        obs = np.where(self._denseMap == False)
+        return obs
+
     def size(self):
         return self._dim
 

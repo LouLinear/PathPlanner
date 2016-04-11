@@ -2,20 +2,15 @@ import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
-
-import matplotlib.animation as animation
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 
 from Tkinter import *
+import tkMessageBox
 import ttk
 import numpy as np
 import gridmap as MAP
 import pathplanner as PP
-
-def display_map(m):
-    """
-    This function takes a gridmap object m and display it in the gui
-    """
-    pass
 
 class startPrompt:
 
@@ -37,8 +32,8 @@ class startPrompt:
         #instruction
         self.instrL = Label(self.topF, text='Planning Simulator', font=16)
         self.expL = Label(self.topF, text="""The graphical interface currently
-        only supports 2D holonomic and nonholonomic planning.
-        3D planning can be done via terminal commands""")
+        only supports 2D holonomic planning. To plan in 3D, select 3D Planning
+        and follow the prompts in the terminal""")
 
         self.instrL.pack()
         self.expL.pack()
@@ -72,23 +67,31 @@ class startPrompt:
             newLv.resizable(width=FALSE, height=FALSE)
             mC = mapCreator(newLv)
         elif self.actionCB.get() == self.options[1]:
-            print "Exiting Gui, entering terminal UX"
-            self.threeDplan()
-       
+            print "Launcing terminal 3D planning UX"
+            self.threeDplanUX()
         return
 
     def safe_exit(self):
         self.master.eval('::ttk::CancelRepeat')
         self.master.destroy()
         
-    def threeDplan(self):
+    def threeDplanUX(self):
         
-        xdim = input("Enter your desired x dimension of the map: ")
-        ydim = input("Enter your desired y dimension of the map: ")
-        zdim = input("Enter your desired z dimension of the map: ")
+        axis_str = ["x", "y", "z"]
+        dim = [0, 0, 0]
+        
+        for i in range(0, 3):
+            while True:
+                try:
+                    tempdim = int(input("Please enter desired %s size: " %axis_str[i]))
+                    break
+                except:
+                    print "Entered value must be an integer"
+                    pass
+            dim[i] = tempdim
 
         start = np.array([0, 0, 0])
-        dim = np.array([int(xdim), int(ydim), int(zdim)])
+        dim = np.array(dim)
         goal = dim - 1
 
         my3Dmap = MAP.GridMapD(dim)
@@ -97,17 +100,22 @@ class startPrompt:
 
 
         print \
-"""
-The system randomly generated obstacles with probability
+"""The simulator randomly generated
+obstacles with probability
 of any given cell of being an obstacle = 0.1
 """
 
         print \
-"""
-The system picked [0, 0, 0] to be your start point and [%d, %d, %d]  for
+"""The simulator picked [0, 0, 0] to be
+your start point and [%d, %d, %d]  for
 your end point since 3D planning is unintuitive and has a lot of cells.
-Let's see if we can find a path"
+Let's see if we can find a path
 """%tuple(goal)
+
+        try:
+            input("Press enter to start planning...")
+        except SyntaxError:
+            pass            
 
         path = Planner3D.plan(start, goal)
         
@@ -115,9 +123,33 @@ Let's see if we can find a path"
             print "We found a path! your waypoints are:\n"
             Planner3D.printpath(path)
         else:
-            print \
-"I am sorry that you can't find a path, let's try again by pressing proceed on the prompt window"
+            print\
+"""I am sorry that you can't find a path, 
+let's try again
+"""
+        try:
+            to_plot = raw_input(\
+"""Would you like me to plot the result for you?\n
+Warning: It could be very slow for large maps (y/n):"""\
+                               )
+        except SyntaxError:
+            to_plot = "No"
+            pass
 
+        if to_plot in ['y', 'Y', 'yes', 'Yes', 'YES']:
+            #plot here
+            obs_sub = my3Dmap.obs_sparse()
+            f = plt.figure()
+            a = f.add_subplot(111, projection='3d')
+            a.scatter(obs_sub[0], obs_sub[1], obs_sub[2], "ro")
+            
+            if path is not None:
+                x_line = path[:, 0]
+                y_line = path[:, 1]
+                z_line = path[:, 2]
+                a.plot(x_line, y_line, z_line, 'b')
+
+            plt.show()
         return
 
 class mapCreator:
@@ -157,33 +189,36 @@ class mapCreator:
         self.canvas._tkcanvas.pack(fill=BOTH, expand=True)
 
         #Labels
-        self.expL = Label(self.rtF, text="left click on the map to add obstacles\n right click to remove\nred is free space", font=20)
-        self.expL.pack()
+        self.expL = Label(self.rtF, text="""left click on the map to add obstacles 
+        right click to remove
+        red indicates free space
+        blue indicates obstacles
+        To change the size of the map,
+        please enter desired size in the box and press reset\n""", font=20)
+        self.expL.grid(row=0, columnspan=2, sticky=N)
+
+        self.xysizeL = Label(self.rtF, text="map size")
+        self.xysizeL.grid(row=1, column=0, sticky=E)
 
         #Entry
-        self.mapX = Entry(self.rtF)
-        self.mapY = Entry(self.rtF)
-        self.mapX.insert(0, "10")
-        self.mapY.insert(0, "10")
-
-        self.mapX.pack()
-        self.mapY.pack()
-        self.xres=10
-        self.yres=10
+        self.mapXYE = Entry(self.rtF)
+        self.mapXYE.insert(0, "10")
+        self.mapXYE.grid(row=1, column=1, sticky=W)
 
         #Buttons
         self.planB = Button(self.rbF, text="Plan", command=self.planBclick)
         self.resetB = Button(self.rbF, text="reset", command=self.resetBclick)
         self.randomB = Button(self.rbF, text="random", command=self.randomBclick)
 
-        self.planB.grid(row=2, column=0, sticky=S)
+        self.planB.grid(row=2, column=0, sticky=N)
         self.resetB.grid(row=0, column=0, sticky=N)
         self.randomB.grid(row=1, column=0, sticky=N)
 
-        #temporary variables
+        # variables
         self.start = np.array([0, 0])
         self.goal = np.array([1, 1])
         self.forcewait = BooleanVar()
+        self.xyres=10
 
     def update_map(self):
         self.a.clear()
@@ -197,9 +232,15 @@ class mapCreator:
         return
 
     def resetBclick(self):
-        self.xres = int(self.mapX.get())
-        self.yres = int(self.mapY.get())
-        self.my2Dmap = MAP.GridMapD([self.xres, self.yres])
+
+        try:
+            self.xyres = int(self.mapXYE.get())
+        except ValueError:
+            tkMessageBox.showwarning("ValueError", \
+                                     "Entered value must be an integer")
+            return
+
+        self.my2Dmap = MAP.GridMapD([self.xyres, self.xyres])
         self.update_map()
         return
 
@@ -216,6 +257,7 @@ class mapCreator:
         self.canvas.get_tk_widget().bind("<Button 1>", self.get_goal)
         self.master.wait_variable(self.forcewait)
         
+
         Planner = PP.PlannerHolo(self.my2Dmap)
         path = Planner.plan(self.start, self.goal)
         
@@ -232,11 +274,11 @@ class mapCreator:
 
         #back to map mode
         self.canvas.get_tk_widget().bind("<Button-1>", self.place_obs)
-        self.expL.config(text="left click on the map to add obstacles\n right click to remove\n red is free space")
+        self.expL_default()
 
     def canvas2plot(self, eventx, eventy):
-        plotx = round(float(eventy - 60)/400*self.yres - 0.5)
-        ploty = round(float(eventx - 65)/400*self.xres - 0.5)
+        plotx = round(float(eventy - 60)/400*self.xyres - 0.5)
+        ploty = round(float(eventx - 65)/400*self.xyres - 0.5)
         return [plotx, ploty]
 
     def place_obs(self, event):
@@ -266,7 +308,18 @@ class mapCreator:
             self.a.autoscale(False)
             self.a.plot(self.goal[1], self.goal[0], 'yx')
             self.canvas.show()
+            self.expL.config(text="Planning, please be patient...\n", font=30)
+            self.master.update()
             self.forcewait.set(False)
+        return
+
+    def expL_default(self):
+        self.expL.config(text="""left click on the map to add obstacles 
+        right click to remove
+        red indicates free space
+        blue indicates obstacles
+        To change the size of the map,
+        please enter desired size in the box and press reset\n""")
         return
     
 
