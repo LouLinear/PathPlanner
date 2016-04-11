@@ -89,8 +89,8 @@ class startPrompt:
         for i in range(0, 3):
             while True:
                 try:
-                    tempdim = int(input("Please enter desired %s size(less than 100 please): " %axis_str[i]))
-                    if tempdim > 100:
+                    tempdim = int(input("Please enter desired %s size(positive integer less than 100 please): " %axis_str[i]))
+                    if tempdim > 100 or tempdim < 1:
                         raise ValueError
                     break
                 except:
@@ -244,12 +244,12 @@ class mapCreator:
 
         try:
             xyres_temp = int(self.mapXYE.get())
-            if xyres_temp > 1000:
+            if xyres_temp > 1000 or xyres_temp < 1:
                 raise ValueError
             self.xyres = xyres_temp
         except ValueError:
             tkMessageBox.showwarning("ValueError", \
-                                     "Entered value must be an integer less than 1000")
+                                     "Entered value must be an positive integer less than 1000")
             return
 
         self.my2Dmap = MAP.GridMapD([self.xyres, self.xyres])
