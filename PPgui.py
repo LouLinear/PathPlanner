@@ -15,6 +15,8 @@ import pathplanner as PP
 class startPrompt:
 
 
+    """The prompt window that gets launched when one runs the path planner"""
+
     def __init__(self, master):
         
         #Frames
@@ -60,17 +62,21 @@ class startPrompt:
     def proceed(self, event):
         
         #Check the value of chosen action
+        
         if self.actionCB.get() == self.options[0]:
             print "Launching map creator..."
             newLv = Toplevel(self.master)
             newLv.wm_title("Map Creator")
             newLv.resizable(width=FALSE, height=FALSE)
             mC = mapCreator(newLv)
+            newLv.grab_set()
         elif self.actionCB.get() == self.options[1]:
-            print "Launcing terminal 3D planning UX"
+            self.master.withdraw()
+            print "Exiting GUI, Launcing terminal 3D planning UX"
             self.threeDplanUX()
         return
 
+    
     def safe_exit(self):
         self.master.eval('::ttk::CancelRepeat')
         self.master.destroy()
@@ -83,10 +89,12 @@ class startPrompt:
         for i in range(0, 3):
             while True:
                 try:
-                    tempdim = int(input("Please enter desired %s size: " %axis_str[i]))
+                    tempdim = int(input("Please enter desired %s size(less than 100 please): " %axis_str[i]))
+                    if tempdim > 100:
+                        raise ValueError
                     break
                 except:
-                    print "Entered value must be an integer"
+                    print "Entered value must be an integer less than 100"
                     pass
             dim[i] = tempdim
 
@@ -112,10 +120,10 @@ your end point since 3D planning is unintuitive and has a lot of cells.
 Let's see if we can find a path
 """%tuple(goal)
 
-        try:
-            input("Press enter to start planning...")
-        except SyntaxError:
-            pass            
+        
+        raw_input("Press enter to start planning...")
+
+        print("Planning, please wait")
 
         path = Planner3D.plan(start, goal)
         
@@ -127,29 +135,29 @@ Let's see if we can find a path
 """I am sorry that you can't find a path, 
 let's try again
 """
-        try:
-            to_plot = raw_input(\
+
+        to_plot = raw_input(\
 """Would you like me to plot the result for you?\n
 Warning: It could be very slow for large maps (y/n):"""\
                                )
-        except SyntaxError:
-            to_plot = "No"
-            pass
 
         if to_plot in ['y', 'Y', 'yes', 'Yes', 'YES']:
             #plot here
             obs_sub = my3Dmap.obs_sparse()
             f = plt.figure()
             a = f.add_subplot(111, projection='3d')
-            a.scatter(obs_sub[0], obs_sub[1], obs_sub[2], "ro")
-            
+            a.scatter(obs_sub[0], obs_sub[1], obs_sub[2])
+
             if path is not None:
                 x_line = path[:, 0]
                 y_line = path[:, 1]
                 z_line = path[:, 2]
-                a.plot(x_line, y_line, z_line, 'b')
+                a.plot(x_line, y_line, z_line, 'r')
 
-            plt.show()
+            plt.draw()
+            plt.pause(0.01)
+        raw_input("Press enter to continue...")
+        self.master.deiconify()
         return
 
 class mapCreator:
@@ -190,11 +198,12 @@ class mapCreator:
 
         #Labels
         self.expL = Label(self.rtF, text="""left click on the map to add obstacles 
-        right click to remove
+        right click to remove obstacles
         red indicates free space
         blue indicates obstacles
         To change the size of the map,
-        please enter desired size in the box and press reset\n""", font=20)
+        please enter desired size in the box and press reset
+        The size of the map can't go more than 1000\n""", font=20)
         self.expL.grid(row=0, columnspan=2, sticky=N)
 
         self.xysizeL = Label(self.rtF, text="map size")
@@ -234,10 +243,13 @@ class mapCreator:
     def resetBclick(self):
 
         try:
-            self.xyres = int(self.mapXYE.get())
+            xyres_temp = int(self.mapXYE.get())
+            if xyres_temp > 1000:
+                raise ValueError
+            self.xyres = xyres_temp
         except ValueError:
             tkMessageBox.showwarning("ValueError", \
-                                     "Entered value must be an integer")
+                                     "Entered value must be an integer less than 1000")
             return
 
         self.my2Dmap = MAP.GridMapD([self.xyres, self.xyres])
@@ -321,6 +333,8 @@ class mapCreator:
         To change the size of the map,
         please enter desired size in the box and press reset\n""")
         return
+
+    
     
 
 def run_program():
