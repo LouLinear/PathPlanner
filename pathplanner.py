@@ -3,16 +3,30 @@ import gridmap as MAP
 import Queue as Q
 
 class GridNode:
+
+
     """
-    A representation of a node on the map so I can utilize priority queue
+    A representation of a node on the map to speed up planning
     """
     def __init__(self, pos, cost=np.float('inf'), heuristic=0, bestPrevNode=None):
+
+        """
+        pos - position of the node
+        cost - cost of the node from the starting point
+        heuristic - expected cost of going from this node to the goal
+        bestPrevNode - the best previous node that can move to this node 
+                       with the least cost
+        """
         self.__pos = pos
         self.__cost = cost
         self.__heuristic = heuristic
         self.__bestPrevNode = bestPrevNode
         
     def __cmp__(self, other):
+
+        """
+        compares the cost of one grid node to another
+        """
         return (self.__cost + self.__heuristic) > (other.__cost + other.__heuristic)
 
     def set_cost(self, newcost):
@@ -34,23 +48,49 @@ class GridNode:
 
 class PlannerBase:
 
+    
+    """
+    Base planner class meant to be inherited
+    """
+
     def __init__(self, gridmap):
+
+        """
+        gridmap is a GridMapD object
+        """
         self._gridmap = gridmap
         self._mapsize = gridmap.size()
         #multiplier for sub2ind-like hash generator
         self._hashMult = np.cumprod(self._mapsize[::-1])
 
     def __gen_hashkey__(self, pos):
+
+        """
+        generates a hashable key given the position of a grid node
+        """
         #basically a sub2ind to get a hashable key for the built-in python dictionary
         #no error raised for dimension mismatch (private function)
         h = sum(np.multiply(self._hashMult[0:-1], pos[0:-1]))
         return (h + pos[-1])
 
 class PlannerAccel(PlannerBase):
+
+
     """
-    An accelerator class that holds all the queues and hash tables for fast planning
+    An accelerator class that holds all the queues and hash tables to speed up planning
     """
     def __init__(self, hashMult, goalkey):
+        """
+        This class contains 
+        -a priority queue for greedy expansion
+        -two hash tables for fast look up on previously seen nodes
+         and explored nodes
+        
+        hashMult is a numpy array storing all the values
+        to generate keys depending on the size of the map
+
+        goal key is the key of the goal
+        """
         self._to_exploreQ = Q.PriorityQueue()
         self._to_exploreH = {}
         self._explored = {}
@@ -98,11 +138,17 @@ class PlannerAccel(PlannerBase):
         return self._explored.has_key(key_n)
         
 class PlannerHolo(PlannerBase):
+
+
     """
-    A* planner for holonomic robot in world space
+    A* planner for holonomic robot in world space, inherits from PlannerBase class
     """
 
     def plan(self, start, goal):
+
+        """
+        performs A* planning given start position and goal position
+        """
 
         if not(self._gridmap.is_inside(start)) or not(self._gridmap.is_inside(goal)):
              print 'Start or goal position out of bound. No path can be found'
@@ -140,15 +186,18 @@ class PlannerHolo(PlannerBase):
         return None
 
     def printpath(self, pathstack):
+
         if pathstack is None: return
         for p in pathstack:
             print p
         return
 
     def _expand(self, Node, goal, acc, vec, nd):
-        #recursive nested for loops to expand adaptively to map dimension
-        #this assumes that I can move to any immediately connected neighbor
 
+        """
+        recursive nested for loops to expand adaptively to map dimension
+        this fucntion assumes that I can move to any immediately connected neighbor
+        """
         if nd > 0:
             for i in range(-1, 2):
                 veccopy = list(vec)

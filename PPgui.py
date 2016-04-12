@@ -58,6 +58,7 @@ class startPrompt:
         self.exitB.grid(row=1, sticky=W)
 
         self.proceedB.bind("<Button-1>", self.proceed)
+        self.master.protocol('WM_DELETE_WINDOW', self.safe_exit)
 
     def proceed(self, event):
         
@@ -245,12 +246,12 @@ class mapCreator:
 
         try:
             xyres_temp = int(self.mapXYE.get())
-            if xyres_temp > 1000 or xyres_temp < 1:
+            if xyres_temp > 1000 or xyres_temp < 2:
                 raise ValueError
             self.xyres = xyres_temp
         except ValueError:
             tkMessageBox.showwarning("ValueError", \
-                                     "Entered value must be an positive integer less than 1000")
+                                     "Entered value must be an positive integer between 2 and 1000")
             return
 
         self.my2Dmap = MAP.GridMapD([self.xyres, self.xyres])
